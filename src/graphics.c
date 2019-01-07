@@ -38,8 +38,11 @@
 #include "metafile-private.h"
 
 #include <cairo-features.h>
+#include <cairo/cairo-win32.h>
 
 #define	NO_CAIRO_AA
+
+#define OBJ_BITMAP          7
 
 #define MAX_GRAPHICS_STATE_STACK 512
 
@@ -171,6 +174,14 @@ gdip_graphics_cairo_init (GpGraphics *graphics, cairo_surface_t *surface)
 	graphics->metafile = NULL;
 	graphics->ct = cairo_create (surface);
 
+	graphics->hwnd = -1;
+	graphics->owndc = FALSE;
+	graphics->savedHDC = 0;
+	graphics->temp_hdc = 0;
+	graphics->temp_hbitmap = 0;
+	graphics->temp_old_hbitmap = 0;
+
+
 #ifndef NO_CAIRO_AA
 		cairo_set_shape_format (graphics->ct, CAIRO_FORMAT_A1);
 #endif
@@ -218,12 +229,12 @@ gdip_metafile_graphics_new (GpMetafile *metafile)
 GpStatus WINGDIPAPI
 GdipCreateFromHDC (HDC hdc, GpGraphics **graphics)
 {
-	GpGraphics *clone = (GpGraphics *)hdc;
-#if HAS_X11 && CAIRO_HAS_XLIB_SURFACE
+	//GpGraphics *clone = (GpGraphics *)hdc;
+//#if HAS_X11 && CAIRO_HAS_XLIB_SURFACE
 	cairo_surface_t *surface;
 	int x, y;
 	unsigned int w, h, border_w, depth;
-#endif
+//#endif
 
 	if (!gdiplusInitialized)
 		return GdiplusNotInitialized;
@@ -236,10 +247,10 @@ GdipCreateFromHDC (HDC hdc, GpGraphics **graphics)
 
 #ifdef CAIRO_HAS_PS_SURFACE
 
-	if (clone->type == gtPostScript) {
-		*graphics = clone;
-		return Ok;
-	}
+	//if (clone->type == gtPostScript) {
+	//	*graphics = clone;
+	//	return Ok;
+	//}
 #endif
 
 	if (clone->type == gtMemoryBitmap)
@@ -253,24 +264,52 @@ GdipCreateFromHDC (HDC hdc, GpGraphics **graphics)
 	surface = cairo_xlib_surface_create(clone->display, clone->drawable,
 	    DefaultVisual(clone->display, DefaultScreen(clone->display)),
 	    w, h);
-			
+#else
+	HDC hDCMem = CreateCompatibleDC(hdc);
+
+	unsigned char* lpBitmapBits;
+
+	BITMAPINFO bi;
+	memset(&bi, 0, sizeof(BITMAPINFO));
+	bi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+	bi.bmiHeader.biWidth = 800;
+	bi.bmiHeader.biHeight = -800;  //negative so (0,0) is at top left
+	bi.bmiHeader.biPlanes = 1;
+	bi.bmiHeader.biBitCount = 32;
+
+	HBITMAP bitmap = CreateDIBSection(hDCMem, &bi, DIB_RGB_COLORS, (VOID**)&lpBitmapBits, NULL, 0);
+	HGDIOBJ oldbmp = SelectObject(hDCMem, bitmap);
+
+	BitBlt(hDCMem, 0, 0, 800, 800, hdc, 0, 0, SRCCOPY);
+
+	surface = cairo_image_surface_create_for_data(lpBitmapBits, CAIRO_FORMAT_ARGB32, 800, 800, 4 * 800);
+
+	//SelectObject(hDCMem, oldbmp);
+	//surface = cairo_win32_surface_create(hdc);
+#endif
 	*graphics = gdip_graphics_new (surface);
 	if (!*graphics) {
 		cairo_surface_destroy (surface);
 		return OutOfMemory;
 	}
 
+	(*graphics)->savedHDC = hdc;
+	(*graphics)->owndc = FALSE;
+	(*graphics)->temp_hdc = hDCMem;
+	(*graphics)->temp_hbitmap = bitmap;
+	(*graphics)->temp_old_hbitmap = oldbmp;
 	(*graphics)->dpi_x = (*graphics)->dpi_y = gdip_get_display_dpi ();
 	cairo_surface_destroy (surface);
 
+#if HAS_X11 && CAIRO_HAS_XLIB_SURFACE
 	if ((*graphics)->drawable)
 		(*graphics)->drawable = clone->drawable;
 
 	if ((*graphics)->display)
 		(*graphics)->display = clone->display;	
-
-	return Ok;
 #endif
+	return Ok;
+//#endif
 
 	return NotImplemented;
 }
@@ -299,7 +338,25 @@ GdipCreateFromHWND (HWND hwnd, GpGraphics **graphics)
 	if (!graphics)
 		return InvalidParameter;
 
-	return NotImplemented;
+	GpStatus ret;
+	HDC hdc;
+
+	hdc = GetDC(hwnd);
+
+	if ((ret = GdipCreateFromHDC(hdc, graphics)) != Ok)
+	{
+		ReleaseDC(hwnd, hdc);
+		return ret;
+	}
+
+	(*graphics)->hwnd = hwnd;
+	(*graphics)->owndc = TRUE;
+	(*graphics)->savedHDC = hdc;
+	(*graphics)->temp_hbitmap = 0;
+	(*graphics)->temp_hdc = 0;
+	(*graphics)->temp_old_hbitmap = 0;
+
+	return Ok;
 }
 
 GpStatus WINGDIPAPI
@@ -454,6 +511,18 @@ GdipDeleteGraphics (GpGraphics *graphics)
 		graphics->saved_status = NULL;
 	}	
 
+	if (graphics->temp_hdc && graphics->temp_hbitmap)
+	{
+		SelectObject(graphics->temp_hdc, graphics->temp_old_hbitmap);
+		DeleteDC(graphics->temp_hdc);
+		DeleteObject(graphics->temp_hbitmap);
+		graphics->temp_hdc = 0;
+		graphics->temp_old_hbitmap = 0;
+		graphics->temp_hbitmap = 0;
+	}
+
+	graphics->savedHDC = 0;
+
 	GdipFree (graphics);
 	return Ok;
 }
@@ -467,7 +536,86 @@ GdipGetDC (GpGraphics *graphics, HDC *hdc)
 	if (graphics->state == GraphicsStateBusy)
 		return ObjectBusy;
 
-	*hdc = (void *)graphics;
+	////*hdc = (void *)graphics;
+	if ((graphics->backend == GraphicsBackEndCairo) && (graphics->ct)) {
+		//cairo_surface_t *surface = cairo_get_target(graphics->ct);
+		//*hdc = cairo_win32_surface_get_dc(surface);
+
+		if (graphics->savedHDC)
+		{
+			*hdc = graphics->savedHDC;
+			graphics->state = GraphicsStateBusy;
+			return Ok;
+		}
+	if (!(*hdc))
+	{
+		/* Create a fake HDC and fill it with a constant color. */
+		HDC temp_hdc;
+		HBITMAP hbitmap;
+		GpRectF bounds;
+		BITMAPINFOHEADER bmih;
+		int i;
+
+		temp_hdc = CreateCompatibleDC(0);
+		hbitmap = CreateCompatibleBitmap(temp_hdc,800,800);
+		HGDIOBJ oldobj = SelectObject(temp_hdc, hbitmap);
+
+		//stat = get_graphics_bounds(graphics, &bounds);
+		//if (stat != Ok)
+		//	return stat;
+
+		graphics->temp_hbitmap_width = 800;
+		graphics->temp_hbitmap_height = 800;
+		graphics->temp_hbitmap = hbitmap;
+		graphics->temp_old_hbitmap = oldobj;
+		*hdc = graphics->savedHDC = graphics->temp_hdc = temp_hdc;
+		graphics->owndc = TRUE;
+		graphics->hwnd = 0;
+
+		graphics->state = GraphicsStateBusy;
+
+		return Ok;
+
+
+		/*bmih.biSize = sizeof(bmih);
+		bmih.biWidth = graphics->temp_hbitmap_width;
+		bmih.biHeight = graphics->temp_hbitmap_height;
+		bmih.biPlanes = 1;
+		bmih.biBitCount = 32;
+		bmih.biCompression = BI_RGB;
+		bmih.biSizeImage = 0;
+		bmih.biXPelsPerMeter = 0;
+		bmih.biYPelsPerMeter = 0;
+		bmih.biClrUsed = 0;
+		bmih.biClrImportant = 0;
+		static const COLORREF DC_BACKGROUND_KEY = 0x0c0b0d;
+
+		hbitmap = CreateDIBSection(NULL, (BITMAPINFO*)&bmih, DIB_RGB_COLORS,(void**)&graphics->temp_bits, NULL, 0);
+		if (!hbitmap)
+			return GenericError;
+
+		temp_hdc = CreateCompatibleDC(0);
+		if (!temp_hdc)
+		{
+			DeleteObject(hbitmap);
+			return GenericError;
+		}
+
+		for (i = 0; i < (graphics->temp_hbitmap_width * graphics->temp_hbitmap_height); i++)
+			((DWORD*)graphics->temp_bits)[i] = DC_BACKGROUND_KEY;
+
+		SelectObject(temp_hdc, hbitmap);
+
+		graphics->temp_hbitmap = hbitmap;
+		*hdc = graphics->temp_hdc = temp_hdc;*/
+	}
+	///else
+	{
+		///*hdc = graphics->hdc;
+	}
+
+	}
+	
 	graphics->state = GraphicsStateBusy;
 
 	return Ok;
@@ -479,8 +627,41 @@ GdipReleaseDC (GpGraphics *graphics, HDC hdc)
 	if (!graphics || !hdc || graphics->state != GraphicsStateBusy)
 		return InvalidParameter;
 
-	if (hdc != (void *)graphics)
-		return InvalidParameter;
+	if (hdc != graphics->savedHDC)
+		return Ok;//but what does it mean?!
+
+	///if (hdc != (void *)graphics)
+	///	return InvalidParameter;
+	if (graphics->owndc) {
+		
+	if (graphics->hwnd != -1)
+			ReleaseDC(graphics->hwnd, graphics->savedHDC);
+		graphics->hwnd = -1;
+	}
+
+
+	/*if (graphics->hwnd != -1)
+		ReleaseDC(graphics->hwnd, hdc);
+	else
+	{
+		if (graphics->owndc)
+		{
+			ReleaseDC(0, hdc);
+			if (graphics->temp_hdc)
+			{
+				DeleteDC(graphics->temp_hdc);
+			graphics->temp_hdc = 0;
+			}
+			if (graphics->temp_hbitmap)
+			{
+			graphics->temp_hbitmap = 0;
+		}
+		}
+		else
+			ReleaseDC(0, hdc);
+	}*/
+
+	///ReleaseDC(graphics->hwnd, hdc);
 
 	graphics->state = GraphicsStateValid;
 
@@ -1337,7 +1518,7 @@ GdipFillEllipse (GpGraphics *graphics, GpBrush *brush, REAL x, REAL y, REAL widt
 GpStatus WINGDIPAPI
 GdipFillEllipseI (GpGraphics *graphics, GpBrush *brush, INT x, INT y, INT width, INT height)
 {
-	return GdipFillEllipse (graphics, brush, x, y, width, height);
+	return GdipFillEllipse (graphics, brush, (float)x, (float)y, (float)width, (float)height);
 }
 
 GpStatus WINGDIPAPI
@@ -1930,6 +2111,10 @@ GdipFlush (GpGraphics *graphics, GpFlushIntention intention)
 
 	surface = cairo_get_target (graphics->ct);
 	cairo_surface_flush (surface);
+
+	if (graphics->temp_hdc && graphics->savedHDC) {
+		BitBlt(graphics->savedHDC, 0, 0,800,800, graphics->temp_hdc, 0, 0, SRCCOPY);
+	}
 
 #ifdef CAIRO_HAS_QUARTZ_SURFACE
 	if (graphics->type == gtOSXDrawable) {

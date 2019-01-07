@@ -31,7 +31,11 @@
 #ifndef __WIN32STRUCTS_H__
 #define __WIN32STRUCTS_H__
 
-#include <glib.h>
+#define MW 1
+
+//#include <glib.h>
+#include "glib-replacement.h"
+
 
 /* public enums and structures that GDI+ reuse from the other Windows API */
 
@@ -297,7 +301,6 @@
 #define PS_ENDCAP_ROUND	0x00000000
 #define PS_ENDCAP_SQUARE	0x00000100
 #define PS_ENDCAP_FLAT		0x00000200
-#define PS_ENDCAP_MASK		0x00000F00
 
 #define PS_JOIN_ROUND		0x00000000
 #define PS_JOIN_BEVEL		0x00001000
@@ -306,7 +309,10 @@
 
 #define PS_COSMETIC		0x00000000
 #define PS_GEOMETRIC     	0x00010000
+#ifndef MW
+#define PS_ENDCAP_MASK		0x00000F00
 #define PS_TYPE_MASK     	0x000F0000
+#endif
 
 /* CreateBrushIndirect */
 #define BS_SOLID		0
@@ -328,17 +334,25 @@
 #define MWT_LEFTMULTIPLY	2
 #define MWT_RIGHTMULTIPLY	3
 
+#ifndef MW
 /* Compression */
 #define BI_RGB           0
 #define BI_RLE8          1
 #define BI_RLE4          2
 #define BI_BITFIELDS     3
+#endif
+#ifndef MW
+#endif
 
 typedef float REAL;
 
-#if defined(WIN32)
+#if defined(WIN32) && !defined(MW)
 #define NOGDI
 #include <Windows.h>
+#else
+
+#ifdef MW
+#include <windows.h>
 #else
 
 typedef int INT;
@@ -398,10 +412,12 @@ typedef gpointer HRGN;
 #define OUT
 #define WINAPI
 
+#endif
 #endif 		/* to avoid conflict with uglify.h */
 
 typedef WORD LANGID;
 
+#ifndef MW
 typedef struct {
 	DWORD Data1;
 	WORD  Data2;
@@ -409,7 +425,9 @@ typedef struct {
 	BYTE  Data4 [8];
 } GUID, Guid, CLSID;
 #endif
+#endif
 
+#ifndef MW
 typedef struct {
 	LONG lfHeight;
 	LONG lfWidth;
@@ -452,7 +470,8 @@ typedef struct {
 	float eDx;
 	float eDy;
 } XFORM;
-
+#endif
+#ifndef MW
 #if !defined(WIN32)
 typedef struct {
 	LONG	x;
@@ -473,7 +492,8 @@ typedef struct {
 	COLORREF	lbColor;
 	LONG		lbHatch;
 } LOGBRUSH;
-
+#endif
+#ifndef MW
 #if !defined(WIN32)
 typedef struct {
 	LONG	left;
@@ -487,6 +507,7 @@ typedef struct {
 	LONG    cy;
 } SIZE, SIZEL;
 #endif
+#endif
 
 typedef struct {
 	SHORT	Left;
@@ -495,15 +516,18 @@ typedef struct {
 	SHORT	Bottom;
 } PWMFRect16;
 
+#ifndef MW
 typedef struct {
 	BYTE rgbBlue;
 	BYTE rgbGreen;
 	BYTE rgbRed;
 	BYTE rgbReserved;
 } RGBQUAD, *LPRGBQUAD;
-
+#endif
 typedef LONG FXPT2DOT30;
 
+
+#ifndef MW
 typedef struct {
 	FXPT2DOT30	ciexyzX;
 	FXPT2DOT30	ciexyzY;
@@ -584,11 +608,12 @@ typedef struct {
 	BITMAPINFOHEADER bmiHeader;
 	RGBQUAD	bmiColors[1];
 } BITMAPINFO, *PBITMAPINFO, *LPBITMAPINFO;
-
+#endif
 #ifndef __GNUC__
 	#pragma pack(2)
 #endif
 
+#ifndef MW
 typedef struct
 #ifdef __GNUC__
 	 __attribute__ ((packed))
@@ -602,6 +627,7 @@ typedef struct
 	DWORD	mtMaxRecord;
 	WORD	mtNoParameters;
 } METAHEADER;
+#endif
 
 typedef struct
 #ifdef __GNUC__
@@ -668,4 +694,24 @@ typedef struct {
 	INT	LogicalDpiY;
 } MetafileHeader;
 
+/* DIB color table identifiers */
+
+#define DIB_RGB_COLORS      0 /* color table in RGBs */
+#define DIB_PAL_COLORS      1 /* color table in palette indices */
+
+#ifndef MW
+DECLSPEC_IMPORT  HBITMAP WINAPI CreateDIBSection(
+	        HDC               hdc,
+	            CONST BITMAPINFO *pbmi,
+	            UINT              usage,
+	VOID            **ppvBits,
+	        HANDLE            hSection,
+	            DWORD             offset);
+
+DECLSPEC_IMPORT HDC WINAPI CreateCompatibleDC(HDC hdc);
+
+DECLSPEC_IMPORT BOOL WINAPI DeleteObject(HGDIOBJ ho);
+
+DECLSPEC_IMPORT HGDIOBJ WINAPI SelectObject(HDC     hdc,HGDIOBJ h);
+#endif
 #endif

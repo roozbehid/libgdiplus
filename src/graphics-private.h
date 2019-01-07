@@ -111,6 +111,19 @@ typedef struct _Graphics {
 	cairo_t			*ct;
 	GpMatrix		*copy_of_ctm;
 	cairo_matrix_t		previous_matrix;
+
+	HWND		hwnd;
+	int			owndc;
+	HDC			savedHDC;
+
+	int temp_hbitmap_width;
+	int temp_hbitmap_height;
+	char* temp_bits;
+	HBITMAP temp_hbitmap;
+	HGDIOBJ temp_old_hbitmap;
+	HDC temp_hdc;
+
+
 #if HAS_X11
 #ifdef CAIRO_HAS_XLIB_SURFACE
 	Display			*display;

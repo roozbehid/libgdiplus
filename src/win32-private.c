@@ -29,6 +29,7 @@ FILE *CreateTempFile (char *filename)
 	TCHAR temppath[MAX_PATH];
 	DWORD ret = 0;
 	
+#ifndef MW
 	ret = GetTempPath (MAX_PATH, temppath);
 	if (ret > MAX_PATH || ret == 0) {
 		return NULL;
@@ -38,11 +39,14 @@ FILE *CreateTempFile (char *filename)
 	if (ret == 0) {
 		return NULL;
 	}
+#else
+	strcpy(filename, "tmp");
+#endif
 
 	return fopen (filename, "wb");
 }
 
-int gdip_get_display_dpi_win32 ()
+int gdip_get_display_dpi_win32 (void)
 {
 	int dpis;
 	HDC dc;

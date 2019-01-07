@@ -32,10 +32,11 @@
 
 #define MAX_GRAPHICS_STATE_STACK 512
 
+#ifndef MW
 #define SRCCOPY             (DWORD)0x00CC0020
 
-BOOL
-BitBlt (HDC hdcDest, int nXDest, int nYDest, int nWidth, int nHeight, HDC hdcSrc, int nXSrc, int nYSrc, DWORD dwRop)
+
+BOOL BitBlt (HDC hdcDest, int nXDest, int nYDest, int nWidth, int nHeight, HDC hdcSrc, int nXSrc, int nYSrc, DWORD dwRop)
 {
 	if (dwRop != SRCCOPY)
 		return FALSE;
@@ -53,3 +54,4 @@ BitBlt (HDC hdcDest, int nXDest, int nYDest, int nWidth, int nHeight, HDC hdcSrc
 	return TRUE;
 }
 
+#endif

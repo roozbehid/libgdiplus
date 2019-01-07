@@ -364,7 +364,7 @@ gdip_erf (float x, float std, float mean)
  convert a ucs2 string to utf8
  length = number of characters to convert, -1 to indicate the whole string
 */
-
+/*
 gchar *
 ucs2_to_utf8(const gunichar2 *ucs2, int length) {
 	const gunichar2	*ptr;
@@ -373,7 +373,7 @@ ucs2_to_utf8(const gunichar2 *ucs2, int length) {
 	gunichar	*uni;
 	gchar		*utf8;
 
-	/* Count length */
+	/* Count length *//*
 	if (length == -1) {
 		ptr = ucs2;
 		length = 0;
@@ -407,8 +407,184 @@ ucs2_to_utf8(const gunichar2 *ucs2, int length) {
 	GdipFree(uni);
 
 	return utf8;
+}*/
+
+gchar *
+ucs2_to_utf8(const gunichar2 *ucs2, int length) {
+	const gunichar2	*ptr;
+	const gunichar2	*end;
+	gunichar	*dest;
+	gunichar	*uni;
+	gchar		*utf8;
+
+	/* Count length */
+	if (length == -1) {
+		ptr = ucs2;
+		length = 0;
+		while (*ptr != 0) {
+			ptr++;
+			length++;
+		}
+	}
+
+	uni = GdipAlloc((length + 1) * sizeof(gunichar));
+	if (uni == NULL) {
+		return NULL;
+	}
+
+	//int uc16_to_utf8(const unsigned short *us, int cc, unsigned char *s)
+
+	uc16_to_utf8(ucs2, length, uni);
+	return uni;
 }
 
+/**
+ * UTF-8 to UTF-16 conversion.  Surrogates are handeled properly, e.g.
+ * a single 4-byte UTF-8 character is encoded into a surrogate pair.
+ * On the other hand, if the UTF-8 string contains surrogate values, this
+ * is considered an error and returned as such.
+ *
+ * The destination array must be able to hold as many Unicode-16 characters
+ * as there are ASCII characters in the UTF-8 string.  This in case all UTF-8
+ * characters are ASCII characters.  No more will be needed.
+ *
+ * This function will also accept Java's variant of UTF-8.  This encodes
+ * U+0000 as two characters rather than one, so the UTF-8 does not contain
+ * any zeroes.
+ *
+ * @author Copyright (c) 2000 Morten Rolland, Screen Media
+ *
+ * @param utf8      Input string in UTF8 format.
+ * @param cc        Number of bytes to convert.
+ * @param unicode16 Destination buffer.
+ * @return          Number of characters converted, or -1 if input is not
+ *                  valid UTF8.
+ */
+// utf8_to_ucs2((const gchar *)fc_str, (gunichar2 *)name, LF_FACESIZE);
+// utf8_to_utf16(fc_str, LF_FACESIZE, name);
+int utf8_to_utf16(const unsigned char *utf8, int cc, unsigned short *unicode16)
+{
+	int count = 0;
+	unsigned char c0, c1;
+	uint32_t scalar;
+
+	while (--cc >= 0) {
+		c0 = *utf8++;
+		/*DPRINTF("Trying: %02x\n",c0);*/
+
+		if (c0 < 0x80) {
+			/* Plain ASCII character, simple translation :-) */
+			*unicode16++ = c0;
+			count++;
+			continue;
+		}
+
+		if ((c0 & 0xc0) == 0x80)
+			/* Illegal; starts with 10xxxxxx */
+			return -1;
+
+		/* c0 must be 11xxxxxx if we get here => at least 2 bytes */
+		scalar = c0;
+		if (--cc < 0)
+			return -1;
+		c1 = *utf8++;
+		/*DPRINTF("c1=%02x\n",c1);*/
+		if ((c1 & 0xc0) != 0x80)
+			/* Bad byte */
+			return -1;
+		scalar <<= 6;
+		scalar |= (c1 & 0x3f);
+
+		if (!(c0 & 0x20)) {
+			/* Two bytes UTF-8 */
+			if ((scalar != 0) && (scalar < 0x80))
+				return -1;	/* Overlong encoding */
+			*unicode16++ = scalar & 0x7ff;
+			count++;
+			continue;
+		}
+
+		/* c0 must be 111xxxxx if we get here => at least 3 bytes */
+		if (--cc < 0)
+			return -1;
+		c1 = *utf8++;
+		/*DPRINTF("c1=%02x\n",c1);*/
+		if ((c1 & 0xc0) != 0x80)
+			/* Bad byte */
+			return -1;
+		scalar <<= 6;
+		scalar |= (c1 & 0x3f);
+
+		if (!(c0 & 0x10)) {
+			/*DPRINTF("####\n");*/
+			/* Three bytes UTF-8 */
+			if (scalar < 0x800)
+				return -1;	/* Overlong encoding */
+			if (scalar >= 0xd800 && scalar < 0xe000)
+				return -1;	/* UTF-16 high/low halfs */
+			*unicode16++ = scalar & 0xffff;
+			count++;
+			continue;
+		}
+
+		/* c0 must be 1111xxxx if we get here => at least 4 bytes */
+		c1 = *utf8++;
+		if (--cc < 0)
+			return -1;
+		/*DPRINTF("c1=%02x\n",c1);*/
+		if ((c1 & 0xc0) != 0x80)
+			/* Bad byte */
+			return -1;
+		scalar <<= 6;
+		scalar |= (c1 & 0x3f);
+
+		if (!(c0 & 0x08)) {
+			/* Four bytes UTF-8, needs encoding as surrogates */
+			if (scalar < 0x10000)
+				return -1;	/* Overlong encoding */
+			scalar -= 0x10000;
+			*unicode16++ = ((scalar >> 10) & 0x3ff) + 0xd800;
+			*unicode16++ = (scalar & 0x3ff) + 0xdc00;
+			count += 2;
+			continue;
+		}
+
+		return -1;	/* No support for more than four byte UTF-8 */
+	}
+	return count;
+}
+
+/*
+ * warning: the length of output string may exceed six x the length of the input
+ */
+int uc16_to_utf8(const unsigned short *us, int cc, unsigned char *s)
+{
+	int i;
+	unsigned char *t = s;
+	unsigned short uc16;
+
+	for (i = 0; i < cc; i++) {
+		uc16 = *us++;
+		if (uc16 <= 0x7F) {
+			*t++ = (char)uc16;
+		}
+		else if (uc16 <= 0x7FF) {
+			*t++ = 0xC0 | (unsigned char)((uc16 >> 6) & 0x1F); /* upper 5 bits */
+			*t++ = 0x80 | (unsigned char)(uc16 & 0x3F);        /* lower 6 bits */
+		}
+		else {
+			*t++ = 0xE0 | (unsigned char)((uc16 >> 12) & 0x0F);/* upper 4 bits */
+			*t++ = 0x80 | (unsigned char)((uc16 >> 6) & 0x3F); /* next 6 bits */
+			*t++ = 0x80 | (unsigned char)(uc16 & 0x3F);        /* lowest 6 bits */
+		}
+	}
+	*t = 0;
+	return (t - s);
+}
+
+///utf8_to_ucs2((const gchar *)fc_str, (gunichar2 *)name, LF_FACESIZE);
+///utf8_to_utf16(fc_str, LF_FACESIZE, name);
+/*
 BOOL
 utf8_to_ucs2(const gchar *utf8, gunichar2 *ucs2, int ucs2_len) {
 	int 		i;
@@ -420,9 +596,9 @@ utf8_to_ucs2(const gchar *utf8, gunichar2 *ucs2, int ucs2_len) {
 	items_read = 0;
 	count = 0;
 
-	ucs2_len--;	/* Space for null terminator */
+	ucs2_len--;	/* Space for null terminator *//*
 
-	ucs4 = g_utf8_to_ucs4(utf8, -1, &items_read, &count, NULL);
+	//////ucs4 = g_utf8_to_ucs4(utf8, -1, &items_read, &count, NULL);
 	if (ucs4 == NULL) {
 		return FALSE;
 	}
@@ -432,15 +608,15 @@ utf8_to_ucs2(const gchar *utf8, gunichar2 *ucs2, int ucs2_len) {
 		if (ucs4[i] < 0x10000 && !(ucs4[i] >= 0xd800 && ucs4[i] < 0xe000)) {
 			*ptr = (gunichar2)ucs4[i];
 			ptr++;
-		}	/* we're simply ignoring any chars that don't fit into ucs2 */
+		}	/* we're simply ignoring any chars that don't fit into ucs2 *//*
 	}
-	ucs2[i] = 0;	/* terminate */
+	ucs2[i] = 0;	/* terminate *//*
 
-	/* free the intermediate ucs4 string */
-	GdipFree(ucs4);
+	/* free the intermediate ucs4 string *//*
+	///GdipFree(ucs4);
 
 	return TRUE;
-}
+}*/
 
 int
 utf8_encode_ucs2char(gunichar2 unichar, BYTE *dest)

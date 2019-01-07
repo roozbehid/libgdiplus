@@ -50,6 +50,7 @@ gdip_brush_setup (GpGraphics *graphics, GpBrush *brush)
 	if (brush == graphics->last_brush && !brush->changed)
 		return Ok;
 	else {
+		if (brush->vtable->setup) {
 		GpStatus status = brush->vtable->setup (graphics, brush);
 		if (status == Ok) {
 			brush->changed = FALSE;
@@ -57,6 +58,11 @@ gdip_brush_setup (GpGraphics *graphics, GpBrush *brush)
 		}
 
 		return status;
+		}
+		else {
+			printf("gdip_brush_setup brush->vtable->setup was NULL!!!!!");
+			return GenericError;
+		}
 	}
 }
 

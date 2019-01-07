@@ -338,7 +338,7 @@ MeasureString (GpGraphics *graphics, GDIPCONST WCHAR *stringUnicode, int *length
 		GdipFree(String);
 		return Ok;
 	}
-	GdipFree (String);
+	//GdipFree (String);
 
 	CursorX=0;
 	CursorY=0;
@@ -904,7 +904,7 @@ DrawString (GpGraphics *graphics, GDIPCONST WCHAR *stringUnicode, int length, GD
 #ifdef DRAWSTRING_DEBUG
 			printf("Drawing %d chars at %d x %d (width=%f pixels)\n", StringDetails[i].LineLen, (int)CursorX, (int)CursorY, StringDetails[i+StringDetails[i].LineLen-1].PosX);
 #endif
-			GdipFree (String);
+			//GdipFree (String);
 
 			if (font->style & (FontStyleUnderline | FontStyleStrikeout)) {
 				double line_width = cairo_get_line_width (graphics->ct);

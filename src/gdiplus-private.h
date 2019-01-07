@@ -32,17 +32,19 @@
 #ifdef _MSC_VER
 #define _USE_MATH_DEFINES
 #endif
+
 #include <math.h>
-#include <glib.h>
+#include "glib-replacement.h"
 #include <ft2build.h>
 #include FT_TRUETYPE_TABLES_H
+
 #ifndef _MSC_VER
 #include <pthread.h>
 #include <unistd.h>
-
 #endif
 
 #include "config.h"
+#include <fontconfig\fontconfig.h>
 
 #if HAVE_VISIBILITY_HIDDEN
 	#define GDIP_INTERNAL __attribute__((visibility ("hidden")))
@@ -52,11 +54,13 @@
 
 #ifdef _MSC_VER
 #define WINGDIPAPI __declspec( dllexport )
+#include <cairo/cairo.h>
 #else
 #define WINGDIPAPI
+#include <cairo/cairo.h>
 #endif
 
-#include <cairo/cairo.h>
+
 #ifdef CAIRO_HAS_FT_FONT
 	#include <cairo/cairo-ft.h>
 #endif

@@ -98,8 +98,7 @@ GetColor (WORD w1, WORD w2)
 #endif
 
 /* http://wvware.sourceforge.net/caolan/Polygon.html */
-static GpStatus
-Polygon (MetafilePlayContext *context, BYTE *data, int len)
+static GpStatus EmfPolygon (MetafilePlayContext *context, BYTE *data, int len)
 {
 	GpPointF *points, *pt;
 	GpStatus status;
@@ -136,8 +135,7 @@ Polygon (MetafilePlayContext *context, BYTE *data, int len)
 }
 
 /* http://wvware.sourceforge.net/caolan/Polyline.html */
-static GpStatus
-Polyline (MetafilePlayContext *context, BYTE *data)
+static GpStatus EmfPolyline (MetafilePlayContext *context, BYTE *data)
 {
 	GpStatus status;
 	int p;
@@ -171,8 +169,7 @@ Polyline (MetafilePlayContext *context, BYTE *data)
 
 /* http://wvware.sourceforge.net/caolan/PolyPolygon.html */
 /* storage isn't very efficient, # of polygons, size of each polygon, data for each polygon */
-static GpStatus
-PolyPolygon (MetafilePlayContext *context, BYTE *data)
+static GpStatus EmfPolyPolygon (MetafilePlayContext *context, BYTE *data)
 {
 	GpStatus status = Ok;
 	/* variable number of parameters */
@@ -341,13 +338,13 @@ gdip_metafile_play_wmf (MetafilePlayContext *context)
 			status = gdip_metafile_CreateBrushIndirect (context, GETW(WP1), GetColor (GETW(WP2), GETW(WP3)), GETW(WP4));
 			break;
 		case META_POLYGON:
-			status = Polygon (context, data, params);
+			status = EmfPolygon (context, data, params);
 			break;
 		case META_POLYLINE:
-			status = Polyline (context, data);
+			status = EmfPolyline (context, data);
 			break;
 		case META_POLYPOLYGON:
-			status = PolyPolygon (context, data);
+			status = EmfPolyPolygon (context, data);
 			break;
 		case META_ARC:
 			WMF_CHECK_PARAMS(8);
