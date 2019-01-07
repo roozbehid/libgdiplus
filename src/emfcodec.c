@@ -182,8 +182,7 @@ PolyBezier (MetafilePlayContext *context, BYTE *data, int len, BOOL compact)
 }
 
 /* the structure is different from WMF (16 or 32bits, RECTL bounds) */
-static GpStatus
-Polygon (MetafilePlayContext *context, BYTE *data, int len, BOOL compact)
+static GpStatus EmfPolygon (MetafilePlayContext *context, BYTE *data, int len, BOOL compact)
 {
 	DWORD num;
 	GpPointF *points, *pt;
@@ -245,8 +244,7 @@ Polygon (MetafilePlayContext *context, BYTE *data, int len, BOOL compact)
 }
 
 /* the structure is different from WMF */
-static GpStatus
-PolyPolygon (MetafilePlayContext *context, BYTE *data, BOOL compact)
+static GpStatus EmfPolyPolygon (MetafilePlayContext *context, BYTE *data, BOOL compact)
 {
 	GpStatus status = Ok;
 	int poly_num;
@@ -381,8 +379,7 @@ ExtCreatePen (MetafilePlayContext *context, BYTE *data, int size)
 	return gdip_metafile_ExtCreatePen (context, GETDW(DWP6), GETDW(DWP7), &lb, GETDW(DWP11), NULL);
 }
 
-static GpStatus
-ModifyWorldTransform (MetafilePlayContext *context, float eM11, float eM12, float eM21, float eM22, 
+static GpStatus EmfModifyWorldTransform (MetafilePlayContext *context, float eM11, float eM12, float eM21, float eM22, 
 	float eDx, float eDy, DWORD iMode)
 {
 	XFORM xf;
@@ -432,10 +429,10 @@ gdip_metafile_play_emf (MetafilePlayContext *context)
 			status = PolyBezier (context, data, size - EMF_MIN_RECORD_SIZE, FALSE);
 			break;
 		case EMR_POLYGON:
-			status = Polygon (context, data, size - EMF_MIN_RECORD_SIZE, FALSE);
+			status = EmfPolygon (context, data, size - EMF_MIN_RECORD_SIZE, FALSE);
 			break;
 		case EMR_POLYPOLYGON:
-			status = PolyPolygon (context, data, FALSE);
+			status = EmfPolyPolygon (context, data, FALSE);
 			break;
 		case EMR_SETWINDOWEXTEX:
 			EMF_CHECK_PARAMS(2);
@@ -515,7 +512,7 @@ gdip_metafile_play_emf (MetafilePlayContext *context)
 			break;
 		case EMR_MODIFYWORLDTRANSFORM:
 			EMF_CHECK_PARAMS(7);
-			status = ModifyWorldTransform (context, GETFLOAT(DWP1), GETFLOAT(DWP2), GETFLOAT(DWP3), 
+			status = EmfModifyWorldTransform (context, GETFLOAT(DWP1), GETFLOAT(DWP2), GETFLOAT(DWP3), 
 				GETFLOAT(DWP4), GETFLOAT(DWP5), GETFLOAT(DWP6), GETDW(DWP7));
 			break;
 		case EMR_SELECTOBJECT:
@@ -592,13 +589,13 @@ gdip_metafile_play_emf (MetafilePlayContext *context)
 			NOTIMPLEMENTED("EMR_EXTTEXTOUTW");
 			break;
 		case EMR_POLYGON16:
-			status = Polygon (context, data, size - EMF_MIN_RECORD_SIZE, TRUE);
+			status = EmfPolygon (context, data, size - EMF_MIN_RECORD_SIZE, TRUE);
 			break;
 		case EMR_POLYBEZIERTO16:
 			status = PolyBezier (context, data, size - EMF_MIN_RECORD_SIZE, TRUE);
 			break;
 		case EMR_POLYPOLYGON16:
-			status = PolyPolygon (context, data, TRUE);
+			status = EmfPolyPolygon (context, data, TRUE);
 			break;
 		case EMR_EXTCREATEPEN:
 			EMF_CHECK_PARAMS(11);
