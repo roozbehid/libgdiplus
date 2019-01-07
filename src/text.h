@@ -31,9 +31,10 @@
 GpStatus WINGDIPAPI GdipDrawString (GpGraphics *graphics, GDIPCONST WCHAR *string, INT length, GDIPCONST GpFont *font,
 	GDIPCONST RectF *layoutRect, GDIPCONST GpStringFormat *stringFormat, GpBrush *brush);
 
-GpStatus WINGDIPAPI GdipMeasureString (GpGraphics *graphics, GDIPCONST WCHAR *string, INT length, GDIPCONST GpFont *font,
-	GDIPCONST RectF *layoutRect, GDIPCONST GpStringFormat *stringFormat,  RectF *boundingBox, INT *codepointsFitted,
-	INT *linesFilled);
+
+GpStatus WINGDIPAPI
+GdipMeasureString(GpGraphics *graphics, GDIPCONST WCHAR *string, INT length, GDIPCONST GpFont *font, GDIPCONST RectF *layoutRect,
+	GDIPCONST GpStringFormat *stringFormat, RectF *boundingBox, INT *codepointsFitted, INT *linesFilled);
 
 GpStatus WINGDIPAPI GdipMeasureCharacterRanges (GpGraphics *graphics, GDIPCONST WCHAR *string, INT length, GDIPCONST GpFont *font,
 	GDIPCONST RectF *layoutRect, GDIPCONST GpStringFormat *stringFormat, INT regionCount, GpRegion **regions);

@@ -34,6 +34,7 @@
 #endif
 
 #include "text-metafile-private.h"
+#include "font-private.h"
 
 /*
  * Text API - validate and delegate
@@ -80,7 +81,8 @@ GdipMeasureString (GpGraphics *graphics, GDIPCONST WCHAR *string, INT length, GD
 			if (layoutRect) {
 				boundingBox->X = layoutRect->X;
 				boundingBox->Y = layoutRect->Y;
-			} else {
+			}
+			else {
 				boundingBox->X = 0;
 				boundingBox->Y = 0;
 			}
@@ -94,7 +96,8 @@ GdipMeasureString (GpGraphics *graphics, GDIPCONST WCHAR *string, INT length, GD
 			*codepointsFitted = 0;
 		}
 		return Ok;
-	} else if (length == -1) {
+	}
+	else if (length == -1) {
 		ptr = string;
 		length = 0;
 		while (*ptr != 0) {

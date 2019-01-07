@@ -26,4 +26,4 @@
 // and returns a handle to the temp file.
 FILE *CreateTempFile (char *filename);
 
-int gdip_get_display_dpi_win32 ();
+int gdip_get_display_dpi_win32 (void);
