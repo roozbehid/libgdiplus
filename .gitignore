@@ -94,3 +94,5 @@ Temporary Items
 coverage.info
 /coverage
 
+*.bak
+*.bc

@@ -85,22 +85,67 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <IncludePath>$(VC_IncludePath);</IncludePath>
+  </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <PreprocessorDefinitions>HAVE_LIBGIF;HAVE_LIBJPEG;HAVE_LIBTIFF;HAVE_LIBPNG;HAVE_FCFINI;USE_PANGO_RENDERING;_WINDLL;WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>MW;HAVE_FCFINI;_WINDLL;WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <!-- FIXME: To align with the GDI+ calling convention, this should be StdCall. Only relevant on x86 -->
       <CallingConvention>Cdecl</CallingConvention>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\;$(ProjectDir)..\..\cairo;$(ProjectDir)..\..\cairo\cairo;$(ProjectDir)..\..\vcpkg\packages\fontconfig_x86-windows\include\;$(ProjectDir)..\..\vcpkg\packages\glib_x86-windows\include\;$(ProjectDir)..\..\vcpkg\packages\freetype_x86-windows\include\;d:\projects\mw\src\include\;$(ProjectDir)..\..\vcpkg\packages\libjpeg-turbo_x86-windows\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>shcore.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>nanox.lib;fontconfig.lib;glib-2.0.lib;freetype.lib;cairo.lib;shcore.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">d:\projects\vcpkg\packages\fontconfig_x86-windows\lib\;d:\projects\cairo\src\debug\;d:\projects\vcpkg\packages\freetype_x86-windows\lib\;d:\projects\vcpkg\packages\glib_x86-windows\lib\;d:\projects\mw\Debug-Dynamic\</AdditionalLibraryDirectories>
     </Link>
     <PreBuildEvent>
       <Command>%windir%\system32\WindowsPowerShell\v1.0\powershell.exe -NonInteractive -Command "(Get-Content \"$(ProjectDir)\..\winconfig.h.in\") -replace '#LIBGDIPLUS_VERSION#', (Select-String -path \"$(ProjectDir)\..\configure.ac\" -pattern 'AC_INIT\(libgdiplus, \[(.*)\]').Matches[0].Groups[1].Value | Set-Content \"$(ProjectDir)\..\config.h\"" 2&gt;&amp;1</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="*.c" />
+    <ClCompile Include="adjustablearrowcap.c" />
+    <ClCompile Include="bitmap.c" />
+    <ClCompile Include="bmpcodec.c" />
+    <ClCompile Include="brush.c" />
+    <ClCompile Include="carbon-private.c" />
+    <ClCompile Include="customlinecap.c" />
+    <ClCompile Include="dstream.c" />
+    <ClCompile Include="emfcodec.c" />
+    <ClCompile Include="emfplus.c" />
+    <ClCompile Include="font.c" />
+    <ClCompile Include="gdi32.c" />
+    <ClCompile Include="general.c" />
+    <ClCompile Include="gifcodec.c" />
+    <ClCompile Include="graphics-cairo.c" />
+    <ClCompile Include="graphics-metafile.c" />
+    <ClCompile Include="graphics-path.c" />
+    <ClCompile Include="graphics-pathiterator.c" />
+    <ClCompile Include="graphics.c" />
+    <ClCompile Include="hatchbrush.c" />
+    <ClCompile Include="icocodec.c" />
+    <ClCompile Include="image.c" />
+    <ClCompile Include="imageattributes.c" />
+    <ClCompile Include="lineargradientbrush.c" />
+    <ClCompile Include="matrix.c" />
+    <ClCompile Include="metafile.c" />
+    <ClCompile Include="pathgradientbrush.c" />
+    <ClCompile Include="pen.c" />
+    <ClCompile Include="pngcodec.c" />
+    <ClCompile Include="print.c" />
+    <ClCompile Include="region-bitmap.c" />
+    <ClCompile Include="region-path-tree.c" />
+    <ClCompile Include="region.c" />
+    <ClCompile Include="solidbrush.c" />
+    <ClCompile Include="stringformat.c" />
+    <ClCompile Include="text-cairo.c" />
+    <ClCompile Include="text-metafile.c" />
+    <ClCompile Include="text-pango.c" />
+    <ClCompile Include="text.c" />
+    <ClCompile Include="texturebrush.c" />
+    <ClCompile Include="tiffcodec.c" />
+    <ClCompile Include="win32-private.c" />
+    <ClCompile Include="wmfcodec.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="*.h" />
