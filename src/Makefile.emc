@@ -1,0 +1,63 @@
+top_srcdir = ..
+
+CC = emcc
+LD = emcc
+
+libgdiplus_la_SOURCES = \
+	adjustablearrowcap.c		\
+	bitmap.c			\
+	brush.c				\
+	carbon-private.c		\
+	customlinecap.c			\
+	dstream.c 			\
+	font.c				\
+	gdi32.c				\
+	general.c			\
+	graphics.c			\
+	graphics-cairo.c		\
+	graphics-metafile.c		\
+	graphics-path.c			\
+	graphics-pathiterator.c		\
+	hatchbrush.c			\
+	icocodec.c			\
+	image.c				\
+	imageattributes.c 		\
+	lineargradientbrush.c 		\
+	matrix.c			\
+	metafile.c			\
+	pathgradientbrush.c 		\
+	pen.c				\
+	print.c				\
+	region.c			\
+	region-bitmap.c			\
+	region-path-tree.c		\
+	solidbrush.c			\
+	stringformat.c			\
+	text.c				\
+	text-metafile.c			\
+	texturebrush.c			\
+	bmpcodec.c			\
+	emfcodec.c			\
+	emfplus.c			\
+	gifcodec.c			\
+	jpegcodec.c			\
+	pngcodec.c			\
+	tiffcodec.c			\
+	wmfcodec.c			\
+    win32-private.c     \
+
+libgdiplus_la_SOURCES += \
+	text-cairo.c			
+
+HEADERS = $(wildcard *.h)
+OBJS=$(libgdiplus_la_SOURCES:.c=.o)
+
+BASE_CFLAGS = -g4 --source-map-base http://localhost:9080/ --profiling-funcs --minify 0 -Wno-ignored-attributes -DMW -DWIN32 -s BINARYEN_TRAP_MODE=clamp -s USE_FREETYPE=1 -I. -I$(top_srcdir) -I../../cairo -I../../cairo/cairo -I../../../mw/src/include -I../../fontconfig
+GDIPLUS_CFLAGS  = $(BASE_CFLAGS) $(PKG_CFLAGS) $(CFG_CFLAGS) $(CFLAGS)
+
+%.o: %.c 
+	$(CC) -s ERROR_ON_UNDEFINED_SYMBOLS=1 -c $< $(GDIPLUS_CFLAGS) -o "$@" 
+
+$libgdiplus.bc: $(OBJS)
+	$(CC) $(OBJS) -s ERROR_ON_UNDEFINED_SYMBOLS=1 -o libgdiplus.bc
+
