@@ -50,7 +50,9 @@
  * format guids
  */
 extern GUID gdip_bmp_image_format_guid;
+#ifdef HAVE_LIBJPEG
 extern GUID gdip_jpg_image_format_guid;
+#endif
 extern GUID gdip_png_image_format_guid;
 extern GUID gdip_gif_image_format_guid;
 extern GUID gdip_tif_image_format_guid;
@@ -85,8 +87,10 @@ gdip_image_format_for_format_guid (GDIPCONST GUID *formatGUID)
 {
 	if (memcmp (formatGUID, &gdip_bmp_image_format_guid, sizeof (GUID)) == 0)
 		return BMP;
+#ifdef HAVE_LIBJPEG	
 	if (memcmp (formatGUID, &gdip_jpg_image_format_guid, sizeof (GUID)) == 0)
 		return JPEG;
+#endif
 	if (memcmp (formatGUID, &gdip_png_image_format_guid, sizeof (GUID)) == 0)
 		return PNG;
 	if (memcmp (formatGUID, &gdip_gif_image_format_guid, sizeof (GUID)) == 0)
@@ -1160,9 +1164,11 @@ GdipLoadImageFromFile (GDIPCONST WCHAR *file, GpImage **image)
 	case PNG:
 		status = gdip_load_png_image_from_file (fp, &result);
 		break;
+#ifdef HAVE_LIBJPEG
 	case JPEG:
 		status = gdip_load_jpeg_image_from_file (fp, file_name, &result);
 		break;
+#endif
 	case ICON:
 		status = gdip_load_ico_image_from_file (fp, &result);
 		break;
@@ -1275,9 +1281,11 @@ GdipSaveImageToFile (GpImage *image, GDIPCONST WCHAR *file, GDIPCONST CLSID *enc
 		case PNG:
 			status = gdip_save_png_image_to_file (fp, image, params);
 			break;
+#ifdef HAVE_LIBJPEG
 		case JPEG:
 			status = gdip_save_jpeg_image_to_file (fp, image, params);
 			break;
+#endif
 		default:
 			status = NotImplemented;
 			break;
@@ -1467,9 +1475,11 @@ GdipGetImageRawFormat (GpImage *image, GUID *format)
 	case PNG:
 		memcpy (format, &gdip_png_image_format_guid, sizeof (GUID));
 		break;
+#ifdef HAVE_LIBJPEG
 	case JPEG:
 		memcpy (format, &gdip_jpg_image_format_guid, sizeof (GUID));
 		break;
+#endif
 	case EXIF:
 		memcpy (format, &gdip_exif_image_format_guid, sizeof (GUID));
 		break;
@@ -2362,10 +2372,12 @@ GdipLoadImageFromDelegate_linux (GetHeaderDelegate getHeaderFunc,
 	format = get_image_format ((char *)format_peek, format_peek_sz, &public_format);
 	
 	switch (format) {
+#ifdef HAVE_LIBJPEG
 	case JPEG:
 		loader = dstream_input_new (getBytesFunc, seekFunc);
 		status = gdip_load_jpeg_image_from_stream_delegate (loader, &result);
 		break;
+#endif
 	case PNG:
 		status = gdip_load_png_image_from_stream_delegate (getBytesFunc, seekFunc, &result);
 		break;
@@ -2427,8 +2439,10 @@ GdipSaveImageToDelegate_linux (GpImage *image, GetBytesDelegate getBytesFunc, Pu
 		return gdip_save_bmp_image_to_stream_delegate (putBytesFunc, image);
 	case PNG:
 		return gdip_save_png_image_to_stream_delegate (putBytesFunc, image, params);
+#ifdef HAVE_LIBJPEG
 	case JPEG:
 		return gdip_save_jpeg_image_to_stream_delegate (putBytesFunc, image, params);
+#endif
 	case GIF:
 		return gdip_save_gif_image_to_stream_delegate (putBytesFunc, image, params);
 	case TIF:
@@ -2465,6 +2479,7 @@ initCodecList (void)
 	epos += sizeof (ImageCodecInfo);
 	g_encoders++;
 	
+#ifdef HAVE_LIBJPEG
 	/* JPEG codec (encoder+decoder) */
 	if (gdip_getcodecinfo_jpeg ()) {
 		memcpy (dpos, gdip_getcodecinfo_jpeg(), sizeof (ImageCodecInfo));
@@ -2474,6 +2489,7 @@ initCodecList (void)
 		epos += sizeof (ImageCodecInfo);
 		g_encoders++;
 	}
+#endif
 	
 	/* GIF codec (encoder+decoder) */
 	if (gdip_getcodecinfo_gif ()) {
@@ -2694,8 +2710,10 @@ GdipGetEncoderParameterList (GpImage *image, GDIPCONST CLSID *clsidEncoder, UINT
 			return gdip_fill_encoder_parameter_list_gif (buffer, size);
 		case PNG:
 			return gdip_fill_encoder_parameter_list_png (buffer, size);
+#ifdef HAVE_LIBJPEG
 		case JPEG:
 			return gdip_fill_encoder_parameter_list_jpeg (buffer, size);
+#endif
 		case BMP:
 			return NotImplemented;
 		default:
