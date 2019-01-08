@@ -38,7 +38,7 @@
 #include "metafile-private.h"
 
 #include <cairo-features.h>
-#include <cairo/cairo-win32.h>
+
 
 #define	NO_CAIRO_AA
 
@@ -253,8 +253,8 @@ GdipCreateFromHDC (HDC hdc, GpGraphics **graphics)
 	//}
 #endif
 
-	if (clone->type == gtMemoryBitmap)
-		return GdipGetImageGraphicsContext (clone->image, graphics);
+	//if (clone->type == gtMemoryBitmap)
+	//	return GdipGetImageGraphicsContext (clone->image, graphics);
 
 #if HAS_X11 && CAIRO_HAS_XLIB_SURFACE
 	Window root;
