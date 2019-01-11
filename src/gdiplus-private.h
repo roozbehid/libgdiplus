@@ -53,8 +53,7 @@
 #endif
 
 #ifdef _MSC_VER
-//#define WINGDIPAPI __declspec( dllexport )
-#define WINGDIPAPI
+#define WINGDIPAPI __declspec( dllexport )
 #include <cairo/cairo.h>
 #else
 #define WINGDIPAPI
