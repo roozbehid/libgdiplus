@@ -265,8 +265,6 @@ GdipCreateFromHDC (HDC hdc, GpGraphics **graphics)
 	    DefaultVisual(clone->display, DefaultScreen(clone->display)),
 	    w, h);
 #else
-	HDC hDCMem = CreateCompatibleDC(hdc);
-
 	unsigned char* lpBitmapBits;
 
 	BITMAPINFO bi;
@@ -277,6 +275,7 @@ GdipCreateFromHDC (HDC hdc, GpGraphics **graphics)
 	bi.bmiHeader.biPlanes = 1;
 	bi.bmiHeader.biBitCount = 32;
 
+	HDC hDCMem = CreateCompatibleDC(hdc);
 	HBITMAP bitmap = CreateDIBSection(hDCMem, &bi, DIB_RGB_COLORS, (VOID**)&lpBitmapBits, NULL, 0);
 	HGDIOBJ oldbmp = SelectObject(hDCMem, bitmap);
 
@@ -351,10 +350,6 @@ GdipCreateFromHWND (HWND hwnd, GpGraphics **graphics)
 
 	(*graphics)->hwnd = hwnd;
 	(*graphics)->owndc = TRUE;
-	(*graphics)->savedHDC = hdc;
-	(*graphics)->temp_hbitmap = 0;
-	(*graphics)->temp_hdc = 0;
-	(*graphics)->temp_old_hbitmap = 0;
 
 	return Ok;
 }
@@ -514,8 +509,8 @@ GdipDeleteGraphics (GpGraphics *graphics)
 	if (graphics->temp_hdc && graphics->temp_hbitmap)
 	{
 		SelectObject(graphics->temp_hdc, graphics->temp_old_hbitmap);
-		DeleteDC(graphics->temp_hdc);
 		DeleteObject(graphics->temp_hbitmap);
+		DeleteDC(graphics->temp_hdc);
 		graphics->temp_hdc = 0;
 		graphics->temp_old_hbitmap = 0;
 		graphics->temp_hbitmap = 0;
