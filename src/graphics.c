@@ -270,8 +270,8 @@ GdipCreateFromHDC (HDC hdc, GpGraphics **graphics)
 	BITMAPINFO bi;
 	memset(&bi, 0, sizeof(BITMAPINFO));
 	bi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-	bi.bmiHeader.biWidth = 800;
-	bi.bmiHeader.biHeight = -800;  //negative so (0,0) is at top left
+	bi.bmiHeader.biWidth = GetSystemMetrics(SM_CXSCREEN);
+	bi.bmiHeader.biHeight = -GetSystemMetrics(SM_CYSCREEN);  //negative so (0,0) is at top left
 	bi.bmiHeader.biPlanes = 1;
 	bi.bmiHeader.biBitCount = 32;
 
@@ -279,9 +279,9 @@ GdipCreateFromHDC (HDC hdc, GpGraphics **graphics)
 	HBITMAP bitmap = CreateDIBSection(hDCMem, &bi, DIB_RGB_COLORS, (VOID**)&lpBitmapBits, NULL, 0);
 	HGDIOBJ oldbmp = SelectObject(hDCMem, bitmap);
 
-	BitBlt(hDCMem, 0, 0, 800, 800, hdc, 0, 0, SRCCOPY);
+	BitBlt(hDCMem, 0, 0, GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN), hdc, 0, 0, SRCCOPY);
 
-	surface = cairo_image_surface_create_for_data(lpBitmapBits, CAIRO_FORMAT_ARGB32, 800, 800, 4 * 800);
+	surface = cairo_image_surface_create_for_data(lpBitmapBits, CAIRO_FORMAT_ARGB32, GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN), 4 * GetSystemMetrics(SM_CXSCREEN));
 
 	//SelectObject(hDCMem, oldbmp);
 	//surface = cairo_win32_surface_create(hdc);
@@ -552,15 +552,15 @@ GdipGetDC (GpGraphics *graphics, HDC *hdc)
 		int i;
 
 		temp_hdc = CreateCompatibleDC(0);
-		hbitmap = CreateCompatibleBitmap(temp_hdc,800,800);
+		hbitmap = CreateCompatibleBitmap(temp_hdc, GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN));
 		HGDIOBJ oldobj = SelectObject(temp_hdc, hbitmap);
 
 		//stat = get_graphics_bounds(graphics, &bounds);
 		//if (stat != Ok)
 		//	return stat;
 
-		graphics->temp_hbitmap_width = 800;
-		graphics->temp_hbitmap_height = 800;
+		graphics->temp_hbitmap_width = GetSystemMetrics(SM_CXSCREEN);
+		graphics->temp_hbitmap_height = GetSystemMetrics(SM_CYSCREEN);
 		graphics->temp_hbitmap = hbitmap;
 		graphics->temp_old_hbitmap = oldobj;
 		*hdc = graphics->savedHDC = graphics->temp_hdc = temp_hdc;
@@ -2108,7 +2108,7 @@ GdipFlush (GpGraphics *graphics, GpFlushIntention intention)
 	cairo_surface_flush (surface);
 
 	if (graphics->temp_hdc && graphics->savedHDC) {
-		BitBlt(graphics->savedHDC, 0, 0,800,800, graphics->temp_hdc, 0, 0, SRCCOPY);
+		BitBlt(graphics->savedHDC, 0, 0, GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN), graphics->temp_hdc, 0, 0, SRCCOPY);
 	}
 
 #ifdef CAIRO_HAS_QUARTZ_SURFACE
