@@ -2108,7 +2108,11 @@ GdipFlush (GpGraphics *graphics, GpFlushIntention intention)
 	cairo_surface_flush (surface);
 
 	if (graphics->temp_hdc && graphics->savedHDC) {
-		BitBlt(graphics->savedHDC, 0, 0, GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN), graphics->temp_hdc, 0, 0, SRCCOPY);
+		if (graphics->clip->type == RegionTypeRect)
+			BitBlt(graphics->savedHDC, graphics->clip->rects->X, graphics->clip->rects->Y,graphics->clip->rects->Width, graphics->clip->rects->Height, graphics->temp_hdc, graphics->clip->rects->X, graphics->clip->rects->Y, SRCCOPY);
+		else
+			BitBlt(graphics->savedHDC, 0,0, GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN), graphics->temp_hdc, 0,0, SRCCOPY);
+
 	}
 
 #ifdef CAIRO_HAS_QUARTZ_SURFACE
