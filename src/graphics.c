@@ -25,7 +25,6 @@
  *   Sebastien Pouliot  <sebastien@ximian.com>
  *   Frederik Carlier <frederik.carlier@quamotion.mobi>
  */
-
 #include "graphics-private.h"
 #include "general-private.h"
 #include "graphics-cairo-private.h"
@@ -36,9 +35,10 @@
 #include "matrix-private.h"
 #include "bitmap-private.h"
 #include "metafile-private.h"
-
 #include <cairo-features.h>
 
+//just to make stupid intellisense work
+#include <device.h>
 
 #define	NO_CAIRO_AA
 
@@ -158,6 +158,11 @@ gdip_graphics_common_init (GpGraphics *graphics)
 	graphics->dpi_x = graphics->dpi_y = 0;
 	graphics->state = GraphicsStateValid;
 
+	graphics->temp_hbitmap_width = GetSystemMetrics(SM_CXSCREEN);
+	graphics->temp_hbitmap_height = GetSystemMetrics(SM_CYSCREEN);
+	graphics->temp_bits = NULL;
+	graphics->temp_hdc = NULL;
+
 #if HAS_X11 && CAIRO_HAS_XLIB_SURFACE
 	graphics->display = (Display*)NULL;
 	graphics->drawable = (Drawable)NULL;
@@ -225,9 +230,20 @@ gdip_metafile_graphics_new (GpMetafile *metafile)
 	return result;
 }
 
-// coverity[+alloc : arg-*1]
 GpStatus WINGDIPAPI
-GdipCreateFromHDC (HDC hdc, GpGraphics **graphics)
+GdipCreateFromHDC(HDC hdc, GpGraphics **graphics)
+{
+	if (!hdc)
+		return OutOfMemory;
+
+	if (hdc->hwnd)
+		return GdipCreateFromHDC_wh(hdc, graphics, hdc->hwnd->clirect.right- hdc->hwnd->clirect.left, hdc->hwnd->clirect.bottom - hdc->hwnd->clirect.top);
+	else
+		return GdipCreateFromHDC_wh(hdc, graphics, GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN));
+}
+
+GpStatus
+GdipCreateFromHDC_wh (HDC hdc, GpGraphics **graphics, int width, int height)
 {
 	//GpGraphics *clone = (GpGraphics *)hdc;
 //#if HAS_X11 && CAIRO_HAS_XLIB_SURFACE
@@ -270,8 +286,8 @@ GdipCreateFromHDC (HDC hdc, GpGraphics **graphics)
 	BITMAPINFO bi;
 	memset(&bi, 0, sizeof(BITMAPINFO));
 	bi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-	bi.bmiHeader.biWidth = GetSystemMetrics(SM_CXSCREEN);
-	bi.bmiHeader.biHeight = -GetSystemMetrics(SM_CYSCREEN);  //negative so (0,0) is at top left
+	bi.bmiHeader.biWidth = width;
+	bi.bmiHeader.biHeight = -height;  //negative so (0,0) is at top left
 	bi.bmiHeader.biPlanes = 1;
 	bi.bmiHeader.biBitCount = 32;
 
@@ -279,9 +295,9 @@ GdipCreateFromHDC (HDC hdc, GpGraphics **graphics)
 	HBITMAP bitmap = CreateDIBSection(hDCMem, &bi, DIB_RGB_COLORS, (VOID**)&lpBitmapBits, NULL, 0);
 	HGDIOBJ oldbmp = SelectObject(hDCMem, bitmap);
 
-	BitBlt(hDCMem, 0, 0, GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN), hdc, 0, 0, SRCCOPY);
+	BitBlt(hDCMem, 0, 0, width, height, hdc, 0, 0, SRCCOPY);
 
-	surface = cairo_image_surface_create_for_data(lpBitmapBits, CAIRO_FORMAT_ARGB32, GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN), 4 * GetSystemMetrics(SM_CXSCREEN));
+	surface = cairo_image_surface_create_for_data(lpBitmapBits, CAIRO_FORMAT_ARGB32, width, height, 4 * width);
 
 	//SelectObject(hDCMem, oldbmp);
 	//surface = cairo_win32_surface_create(hdc);
@@ -298,6 +314,8 @@ GdipCreateFromHDC (HDC hdc, GpGraphics **graphics)
 	(*graphics)->temp_hbitmap = bitmap;
 	(*graphics)->temp_old_hbitmap = oldbmp;
 	(*graphics)->dpi_x = (*graphics)->dpi_y = gdip_get_display_dpi ();
+	(*graphics)->temp_hbitmap_height = height;
+	(*graphics)->temp_hbitmap_width  = width;
 	cairo_surface_destroy (surface);
 
 #if HAS_X11 && CAIRO_HAS_XLIB_SURFACE
@@ -339,10 +357,12 @@ GdipCreateFromHWND (HWND hwnd, GpGraphics **graphics)
 
 	GpStatus ret;
 	HDC hdc;
+	RECT rect;
 
 	hdc = GetDC(hwnd);
 
-	if ((ret = GdipCreateFromHDC(hdc, graphics)) != Ok)
+	GetWindowRect(hwnd, &rect);
+	if ((ret = GdipCreateFromHDC_wh(hdc, graphics, rect.right - rect.left, rect.bottom - rect.top)) != Ok)
 	{
 		ReleaseDC(hwnd, hdc);
 		return ret;
@@ -2093,9 +2113,11 @@ GdipEndContainer (GpGraphics *graphics, GraphicsContainer state)
 	return GdipRestoreGraphics (graphics, state);
 }
 
+
 GpStatus WINGDIPAPI
 GdipFlush (GpGraphics *graphics, GpFlushIntention intention)
 {
+	//printf("GdipFlush started...!\n");
 	cairo_surface_t* surface;
 
 	if (!graphics)
@@ -2106,13 +2128,23 @@ GdipFlush (GpGraphics *graphics, GpFlushIntention intention)
 
 	surface = cairo_get_target (graphics->ct);
 	cairo_surface_flush (surface);
-
+	
+	
 	if (graphics->temp_hdc && graphics->savedHDC) {
 		if (graphics->clip->type == RegionTypeRect)
-			BitBlt(graphics->savedHDC, graphics->clip->rects->X, graphics->clip->rects->Y,graphics->clip->rects->Width, graphics->clip->rects->Height, graphics->temp_hdc, graphics->clip->rects->X, graphics->clip->rects->Y, SRCCOPY);
+		{
+			//printf("bitblt to savedHDC #1\n");
+			BitBlt(graphics->savedHDC, graphics->clip->rects->X, graphics->clip->rects->Y, graphics->clip->rects->Width, graphics->clip->rects->Height, graphics->temp_hdc, graphics->clip->rects->X, graphics->clip->rects->Y, SRCCOPY);
+		}
 		else
-			BitBlt(graphics->savedHDC, 0,0, GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN), graphics->temp_hdc, 0,0, SRCCOPY);
+		{
+			//printf("bitblt to savedHDC #2\n");
+			BitBlt(graphics->savedHDC, 0, 0, graphics->temp_hbitmap_width, graphics->temp_hbitmap_height, graphics->temp_hdc, 0, 0, SRCCOPY);
+		}
 
+	}
+	else {
+		//printf("GdipFlush but no valid savedHDC!\n");
 	}
 
 #ifdef CAIRO_HAS_QUARTZ_SURFACE
