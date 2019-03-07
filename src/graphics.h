@@ -32,6 +32,8 @@ GpStatus WINGDIPAPI GdipEndContainer (GpGraphics *graphics, GraphicsContainer st
 GpStatus WINGDIPAPI GdipFlush (GpGraphics *graphics, GpFlushIntention intention);
 
 GpStatus WINGDIPAPI GdipCreateFromHDC (HDC hdc, GpGraphics **graphics);
+//only used internally!
+GpStatus GdipCreateFromHDC_wh(HDC hdc, GpGraphics **graphics, int width, int height);
 GpStatus WINGDIPAPI GdipCreateFromHDC2 (HDC hdc, HANDLE hDevice, GpGraphics **graphics);
 
 GpStatus WINGDIPAPI GdipCreateFromHWND(HWND hwnd, GpGraphics **graphics);

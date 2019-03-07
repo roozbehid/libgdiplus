@@ -106,7 +106,7 @@ GpStatus gdip_get_status (cairo_status_t status) GDIP_INTERNAL;
 GpStatus gdip_get_pattern_status (cairo_pattern_t *pat) GDIP_INTERNAL;
 
 gchar *ucs2_to_utf8 (const gunichar2 *ucs2, int length) GDIP_INTERNAL;
-int uc16_to_utf8(const unsigned short *us, int cc, unsigned char *s);
+int gdip_uc16_to_utf8(const unsigned short *us, int cc, unsigned char *s);
 //BOOL utf8_to_ucs2 (const gchar *utf8, gunichar2 *ucs2, int ucs2_len) GDIP_INTERNAL;
 int utf8_encode_ucs2char (gunichar2 unichar, unsigned char *dest) GDIP_INTERNAL;
 

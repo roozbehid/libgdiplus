@@ -432,9 +432,9 @@ ucs2_to_utf8(const gunichar2 *ucs2, int length) {
 		return NULL;
 	}
 
-	//int uc16_to_utf8(const unsigned short *us, int cc, unsigned char *s)
+	//int gdip_uc16_to_utf8(const unsigned short *us, int cc, unsigned char *s)
 
-	uc16_to_utf8(ucs2, length, uni);
+	gdip_uc16_to_utf8(ucs2, length, uni);
 	return uni;
 }
 
@@ -557,7 +557,7 @@ int utf8_to_utf16(const unsigned char *utf8, int cc, unsigned short *unicode16)
 /*
  * warning: the length of output string may exceed six x the length of the input
  */
-int uc16_to_utf8(const unsigned short *us, int cc, unsigned char *s)
+int gdip_uc16_to_utf8(const unsigned short *us, int cc, unsigned char *s)
 {
 	int i;
 	unsigned char *t = s;
